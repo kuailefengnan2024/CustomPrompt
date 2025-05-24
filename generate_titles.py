@@ -36,6 +36,17 @@ SYSTEM_PROMPT = """你是一位专业的活动策划和文案专家，擅长创�
 
 请直接输出标题，不要添加任何解释或其他内容。"""
 
+def load_env():
+    """尝试从.env文件加载环境变量"""
+    env_file = ".env"
+    if os.path.exists(env_file):
+        with open(env_file, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, value = line.split('=', 1)
+                    os.environ[key.strip()] = value.strip()
+
 class TitleGenerator:
     def __init__(self, api_key):
         self.api_key = api_key
@@ -153,11 +164,15 @@ def load_combinations():
         exit(1)
 
 def main():
+    # 加载环境变量
+    load_env()
+    
     # 检查API key
     api_key = os.getenv('OPENAI_API_KEY')
-    if not api_key:
-        print("请设置 OPENAI_API_KEY 环境变量")
-        print("例如: export OPENAI_API_KEY='your-api-key-here'")
+    if not api_key or api_key == 'your-api-key-here':
+        print("❌ 请设置 OPENAI_API_KEY")
+        print("方式1: 命令行设置: export OPENAI_API_KEY='your-key'") 
+        print("方式2: 创建.env文件并添加: OPENAI_API_KEY=your-key")
         exit(1)
     
     # 加载组合
