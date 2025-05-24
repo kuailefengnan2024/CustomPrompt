@@ -12,6 +12,8 @@ import requests
 
 # API配置
 API_CONFIG = {
+    "api_url": "https://api.tu-zi.com/v1/chat/completions",
+    "api_key": "sk-uHuYUvSiN3xbHBKhmQ9Yf6Zucbv6T3YRvG5VqjKfeObB5H8u",
     "model": "gpt-4o",
     "max_tokens": 50,
     "temperature": 0.8,
@@ -48,9 +50,10 @@ def load_env():
                     os.environ[key.strip()] = value.strip()
 
 class TitleGenerator:
-    def __init__(self, api_key):
-        self.api_key = api_key
-        self.api_url = "https://api.openai.com/v1/chat/completions"
+    def __init__(self, api_key=None, api_url=None):
+        # 使用传入的参数或默认配置
+        self.api_key = api_key or API_CONFIG["api_key"]
+        self.api_url = api_url or API_CONFIG["api_url"]
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
@@ -89,6 +92,7 @@ class TitleGenerator:
                     return title
                 else:
                     print(f"API调用失败，状态码: {response.status_code}")
+                    print(f"错误信息: {response.text}")
                     
             except Exception as e:
                 print(f"第 {attempt + 1} 次尝试失败: {str(e)}")
@@ -104,6 +108,7 @@ class TitleGenerator:
         total = len(combinations)
         
         print(f"开始为 {total} 个组合生成标题...")
+        print(f"使用API: {self.api_url}")
         print("=" * 50)
         
         for i, combination in enumerate(combinations, 1):
@@ -164,19 +169,31 @@ def load_combinations():
         exit(1)
 
 def main():
-    # 加载环境变量
+    # 加载环境变量（作为备选）
     load_env()
     
-    # 检查API key
-    api_key = os.getenv('OPENAI_API_KEY')
-    if not api_key or api_key == 'your-api-key-here':
-        print("❌ 请设置 OPENAI_API_KEY")
-        print("方式1: 命令行设置: export OPENAI_API_KEY='your-key'") 
-        print("方式2: 创建.env文件并添加: OPENAI_API_KEY=your-key")
-        exit(1)
+    # 检查是否有环境变量覆盖默认配置
+    env_api_key = os.getenv('OPENAI_API_KEY')
+    env_api_url = os.getenv('OPENAI_API_URL')
+    
+    # 如果环境变量存在且不是默认值，则使用环境变量
+    api_key = None
+    api_url = None
+    
+    if env_api_key and env_api_key != 'your-api-key-here':
+        api_key = env_api_key
+        print("✅ 使用环境变量中的API key")
+    else:
+        print("✅ 使用内置的API key")
+    
+    if env_api_url:
+        api_url = env_api_url
+        print("✅ 使用环境变量中的API URL")
+    else:
+        print("✅ 使用内置的API URL")
     
     # 加载组合
-    print("正在加载组合文件...")
+    print("\n正在加载组合文件...")
     combinations = load_combinations()
     print(f"加载了 {len(combinations)} 个组合")
     
@@ -196,7 +213,7 @@ def main():
             print("使用默认延迟时间")
     
     # 创建生成器并开始生成
-    generator = TitleGenerator(api_key)
+    generator = TitleGenerator(api_key, api_url)
     results = generator.generate_titles(combinations)
     generator.save_results(results)
     
